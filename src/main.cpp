@@ -3,6 +3,8 @@
 #include <ESP8266WebServer.h>
 #include <WebSocketsClient.h>
 
+#include <FS.h>
+
 #include "BME.h"
 #include "NTP.h"
 
@@ -25,7 +27,6 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length);
 
 void setup()
 {
-
 	Serial.begin(115200);
 
 	while (WiFi.status() != WL_CONNECTED)
@@ -48,17 +49,15 @@ void setup()
 	// event handler
 	webSocket.onEvent(webSocketEvent);
 
-	// try ever 5000 again if connection has failed
-	webSocket.setReconnectInterval(5000);
-
 	while(epoch == 0)
 	{
 		webSocket.loop();
 		delay(10);
 
-		if(millis() >= 50000)
+		if(millis() >= 50000)				//wait 50sec for answer from server
 			break;
 	}
+
 
 	epoch = epoch - (micros() - measureTime)/u_long(1000000);			//taking into account that measuring was earlier
 
@@ -68,6 +67,15 @@ void setup()
 
 	webSocket.disconnect();
 
+	if(epoch != 0)
+	{	
+		SPIFFS.begin();
+		File memory = SPIFFS.open("memory.txt", "r");
+		String line;
+		cout(memory, line);
+		memory.read();
+
+	}
 	
 	Serial.println(micros());
 	if((sleepInterval - micros()) > 60e6)
